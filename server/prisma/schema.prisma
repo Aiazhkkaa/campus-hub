@@ -11,3 +11,175 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+// ─────────────── ENUMS (фиксированные списки значений) ───────────────
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum ActivityCategory {
+  FOOD
+  STUDY
+  SPORTS
+  CULTURE
+  GAMES
+  OTHER
+}
+
+enum ActivityStatus {
+  OPEN
+  CANCELLED
+}
+
+enum ClubCategory {
+  IT
+  BUSINESS
+  SPORTS
+  VOLUNTEER
+  CREATIVE
+  DEBATE
+  OTHER
+}
+
+enum ClubRole {
+  MEMBER
+  REPRESENTATIVE
+}
+
+enum MembershipStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─────────────── USER ───────────────
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  avatarUrl     String?
+  faculty       String?
+  year          Int?
+  bio           String?
+  role          Role     @default(STUDENT)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  createdActivities      Activity[]            @relation("ActivityCreator")
+  activityParticipations ActivityParticipant[]
+  createdEvents          Event[]               @relation("EventCreator")
+  eventRegistrations     EventRegistration[]
+  clubMemberships        ClubMember[]
+  clubFollows            ClubFollow[]
+}
+
+// ─────────────── FIND YOUR PEOPLE ───────────────
+
+model Activity {
+  id              String           @id @default(uuid())
+  title           String
+  description     String
+  category        ActivityCategory
+  startsAt        DateTime
+  location        String
+  maxParticipants Int
+  status          ActivityStatus   @default(OPEN)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  creatorId    String
+  creator      User                  @relation("ActivityCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  participants ActivityParticipant[]
+
+  @@index([startsAt])
+}
+
+model ActivityParticipant {
+  userId     String
+  activityId String
+  joinedAt   DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@id([userId, activityId])
+}
+
+// ─────────────── CLUBS ───────────────
+
+model Club {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String
+  category    ClubCategory
+  logoUrl     String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  members   ClubMember[]
+  followers ClubFollow[]
+  events    Event[]
+}
+
+model ClubMember {
+  userId    String
+  clubId    String
+  role      ClubRole         @default(MEMBER)
+  status    MembershipStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@id([userId, clubId])
+}
+
+model ClubFollow {
+  userId    String
+  clubId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@id([userId, clubId])
+}
+
+// ─────────────── EVENTS ───────────────
+
+model Event {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  startsAt        DateTime
+  location        String
+  imageUrl        String?
+  capacity        Int?
+  registrationUrl String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  clubId      String?
+  club        Club?   @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  createdById String
+  createdBy   User    @relation("EventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  registrations EventRegistration[]
+
+  @@index([startsAt])
+}
+
+model EventRegistration {
+  userId       String
+  eventId      String
+  registeredAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([userId, eventId])
+}
