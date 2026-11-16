@@ -4,6 +4,6 @@
  * - On the internet (Vercel)   -> the server deployed on Render
  */
 const LOCAL_API = 'http://localhost:3001/api';
-const PRODUCTION_API = 'https://campushub-api.onrender.com/api';
+const PRODUCTION_API = 'https://campushub-api-kpk0.onrender.com/api';
 
 export const API_URL = location.hostname === 'localhost' ? LOCAL_API : PRODUCTION_API;
