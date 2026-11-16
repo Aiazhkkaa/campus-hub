@@ -5,7 +5,7 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -75,6 +75,8 @@ model User {
   eventRegistrations     EventRegistration[]
   clubMemberships        ClubMember[]
   clubFollows            ClubFollow[]
+  createdPolls           Poll[]                @relation("PollCreator")
+  pollVotes              PollVote[]
 }
 
 // ─────────────── FIND YOUR PEOPLE ───────────────
@@ -182,4 +184,44 @@ model EventRegistration {
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@id([userId, eventId])
+}
+
+// ─────────────── POLLS & VOTING ───────────────
+
+model Poll {
+  id        String    @id @default(uuid())
+  question  String
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  creatorId String
+  creator   User         @relation("PollCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  options   PollOption[]
+  votes     PollVote[]
+
+  @@index([createdAt])
+}
+
+model PollOption {
+  id       String @id @default(uuid())
+  text     String
+  position Int
+
+  pollId String
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes  PollVote[]
+}
+
+/// One vote per user per poll (the user can change which option it points to)
+model PollVote {
+  userId    String
+  pollId    String
+  optionId  String
+  createdAt DateTime @default(now())
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, pollId])
 }
